@@ -1,60 +1,53 @@
-import argparse
 import os
-import sys
-from datetime import date
+import argparse
+from datetime import datetime
 
-def add_date_to_filenames(folder: str, dry_run: bool = False):
-    """Rename files in *folder* by prefixing today's date (YYYY-MM-DD).
+def add_date_to_filenames(folder_path: str, dry_run: bool = False) -> None:
+    """Prefix each file in *folder_path* with today's date (YYYY-MM-DD).
 
     Args:
-        folder: Path to the target directory.
-        dry_run: If True, only print the intended renames without performing them.
+        folder_path: Path to the directory containing files to rename.
+        dry_run: If True, only prints the intended rename operations without
+            performing them.
     """
-    # Resolve absolute path
-    folder_path = os.path.abspath(folder)
+    # Ensure the folder exists
     if not os.path.isdir(folder_path):
-        print(f"Error: '{folder_path}' is not a valid directory.")
-        sys.exit(1)
+        raise FileNotFoundError(f"Directory not found: {folder_path}")
 
-    today_str = date.today().isoformat()  # YYYY-MM-DD
-
+    today_str = datetime.now().strftime("%Y-%m-%d")
     for entry in os.listdir(folder_path):
-        entry_path = os.path.join(folder_path, entry)
+        old_path = os.path.join(folder_path, entry)
         # Skip subdirectories
-        if os.path.isdir(entry_path):
+        if not os.path.isfile(old_path):
             continue
-        # Skip if already prefixed with a date pattern (basic check)
-        if entry.startswith(today_str + "_"):
+        # Skip files that already start with the date
+        if entry.startswith(f"{today_str}_"):
             continue
         new_name = f"{today_str}_{entry}"
         new_path = os.path.join(folder_path, new_name)
         if dry_run:
-            print(f"Would rename: {entry} -> {new_name}")
+            print(f"[DRY RUN] Would rename: {old_path} -> {new_path}")
         else:
-            try:
-                os.rename(entry_path, new_path)
-                print(f"Renamed: {entry} -> {new_name}")
-            except Exception as e:
-                print(f"Failed to rename '{entry}': {e}")
+            os.rename(old_path, new_path)
+            print(f"Renamed: {old_path} -> {new_path}")
+
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Add today's date (YYYY-MM-DD) to the beginning of every filename in a folder."
-    )
+    parser = argparse.ArgumentParser(description="Add today's date to filenames in a folder.")
     parser.add_argument(
         "-d",
         "--directory",
         type=str,
-        default=".",
-        help="Target directory (default: current working directory).",
+        default=os.path.join(os.getcwd(), "dates"),
+        help="Target directory (default: ./dates relative to current working directory)",
     )
     parser.add_argument(
-        "-n",
         "--dry-run",
         action="store_true",
-        help="Show what would be renamed without making changes.",
+        help="Show what would be renamed without making changes",
     )
     return parser.parse_args()
+
 
 if __name__ == "__main__":
     args = parse_args()
